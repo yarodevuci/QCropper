@@ -19,7 +19,7 @@ enum CropBoxEdge: Int {
 }
 
 public protocol CropperViewControllerDelegate: AnyObject {
-    func cropperDidConfirm(_ cropper: CropperViewController, state: CropperState?)
+    func cropperDidConfirm(_ cropper: CropperViewController, state: CropperState?, starsRequested: Int)
     func cropperDidCancel(_ cropper: CropperViewController)
 }
 
@@ -33,11 +33,15 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
     public let originalImage: UIImage
     var initialState: CropperState?
     var isCircular: Bool
+    
+    var starsRequested = 0
+    var payToViewEnabled = false
 
-    public init(originalImage: UIImage, initialState: CropperState? = nil, isCircular: Bool = false) {
+    public init(originalImage: UIImage, initialState: CropperState? = nil, isCircular: Bool = false, payToView: Bool = false) {
         self.originalImage = originalImage
         self.initialState = initialState
         self.isCircular = isCircular
+        self.payToViewEnabled = payToView
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .fullScreen
     }
@@ -160,6 +164,8 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         toolbar.doneButton.addTarget(self, action: #selector(confirmButtonPressed(_:)), for: .touchUpInside)
         toolbar.cancelButton.addTarget(self, action: #selector(cancelButtonPressed(_:)), for: .touchUpInside)
         toolbar.resetButton.addTarget(self, action: #selector(resetButtonPressed(_:)), for: .touchUpInside)
+        toolbar.blurButton.addTarget(self, action: #selector(blurButtonPressed(_:)), for: .touchUpInside)
+        toolbar.blurButton.isHidden = !payToViewEnabled
 
         return toolbar
     }()
@@ -183,6 +189,14 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         ar.addTarget(self, action: #selector(angleRulerValueChanged(_:)), for: .valueChanged)
         ar.addTarget(self, action: #selector(angleRulerTouchEnded(_:)), for: [.editingDidEnd])
         return ar
+    }()
+    
+    public lazy var starsAmountLabel: UILabel = {
+        let label = UILabel()
+        label.textAlignment = .center
+        label.textColor = .yellow
+        label.font = UIFont.systemFont(ofSize: 13)
+        return label
     }()
 
     public lazy var aspectRatioPicker: AspectRatioPicker = {
@@ -252,7 +266,8 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         bottomView.addSubview(aspectRatioPicker)
         bottomView.addSubview(angleRuler)
         bottomView.addSubview(toolbar)
-
+        bottomView.addSubview(starsAmountLabel)
+        
         view.addSubview(backgroundView)
         view.addSubview(bottomView)
         view.addSubview(topBar)
@@ -342,7 +357,19 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
 
     @objc
     func confirmButtonPressed(_: UIButton) {
-        delegate?.cropperDidConfirm(self, state: saveState())
+        delegate?.cropperDidConfirm(self, state: saveState(), starsRequested: starsRequested)
+    }
+    
+    @objc
+    func blurButtonPressed(_: UIButton) {
+        showPayToViewAlert(from: self) { amount in
+            if let amount = amount {
+                self.starsRequested = amount
+                self.starsAmountLabel.text = amount == 0 ? nil : "Viewing price: ⭐ \(amount)"
+
+                print("User entered: \(amount) stars")
+            }
+        }
     }
 
     @objc
@@ -383,6 +410,34 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         angleRuler.isHidden = sender.isSelected
         aspectRatioPicker.isHidden = !sender.isSelected
     }
+    
+    func showPayToViewAlert(from viewController: UIViewController, onConfirm: @escaping (Int?) -> Void) {
+        let title = "Unlock Photo with Stars"
+        let message = "Enter the number of stars required to view this photo."
+        
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.text = self.starsRequested == 0 ? nil : "\(self.starsRequested)"
+            textField.placeholder = "Set price to view"
+            textField.keyboardType = .numberPad
+        }
+        
+        let confirmAction = UIAlertAction(title: "Set", style: .default) { _ in
+            if let text = alert.textFields?.first?.text, let amount = Int(text) {
+                onConfirm(amount)
+            } else {
+                onConfirm(nil) 
+            }
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        
+        alert.addAction(confirmAction)
+        alert.addAction(cancelAction)
+        
+        viewController.present(alert, animated: true, completion: nil)
+    }
 
 // MARK: - Private Methods
 
@@ -401,10 +456,13 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         topBar.frame = CGRect(x: 0, y: 0, width: view.width, height: view.safeAreaInsets.top + barHeight)
         toolbar.size = CGSize(width: view.width, height: view.safeAreaInsets.bottom + barHeight)
         bottomView.size = CGSize(width: view.width, height: toolbar.height + angleRuler.height + margin)
+        
         bottomView.bottom = view.height
         toolbar.bottom = bottomView.height
         angleRuler.bottom = toolbar.top - margin
         aspectRatioPicker.frame = angleRuler.frame
+        
+        starsAmountLabel.frame = CGRect(x: 0, y: angleRuler.bottom, width: view.width, height: 25)
 
         let topHeight = topBar.isHidden ? view.safeAreaInsets.top : topBar.height
         let toolbarHeight = toolbar.isHidden ? view.safeAreaInsets.bottom : toolbar.height
