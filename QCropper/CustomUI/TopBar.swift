@@ -1,44 +1,30 @@
 //
-//  Toolbar.swift
+//  TopBar.swift
 //
 //  Created by Chen Qizhi on 2019/10/15.
 //
 
 import UIKit
 
-class Toolbar: UIView {
-    lazy var cancelButton: UIButton = {
-        let button = self.titleButton("Cancel")
+class TopBar: UIView {
+    lazy var flipButton: UIButton = {
+        let button = self.iconButton(iconName: "QCropper.flip.horizontal.fill")
         button.left = 0
-        button.autoresizingMask = [.flexibleBottomMargin, .flexibleRightMargin]
+        button.autoresizingMask = [.flexibleTopMargin, .flexibleRightMargin]
         return button
     }()
 
-    lazy var resetButton: UIButton = {
-        let button = self.titleButton("RESET", highlight: true)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 14)
-        button.isHidden = true
-        button.centerX = self.width / 2
-        button.autoresizingMask = [.flexibleBottomMargin, .flexibleRightMargin]
+    lazy var rotateButton: UIButton = {
+        let button = self.iconButton(iconName: "QCropper.rotate.right.fill")
+        button.left = self.flipButton.right
+        button.autoresizingMask = [.flexibleTopMargin, .flexibleRightMargin]
         return button
     }()
 
-    lazy var doneButton: UIButton = {
-        let button = self.titleButton("Upload", highlight: true)
+    lazy var aspectRationButton: UIButton = {
+        let button = self.iconButton(iconName: "QCropper.aspectratio.fill")
         button.right = self.width
-        button.setTitleColor(UIColor(white: 0.4, alpha: 1), for: .disabled)
-        button.autoresizingMask = [.flexibleBottomMargin, .flexibleLeftMargin]
-        return button
-    }()
-    
-    lazy var blurButton: UIButton = {
-        let button = self.titleButton("Pay to View", highlight: false)
-        button.right = self.width - 70
-        if #available(iOS 13.0, *) {
-            button.setTitleColor(UIColor.link, for: .normal)
-        }
-        button.centerY = self.centerY  // Align vertically
-        button.autoresizingMask = [.flexibleBottomMargin, .flexibleRightMargin]
+        button.autoresizingMask = [.flexibleTopMargin, .flexibleLeftMargin]
         return button
     }()
 
@@ -56,32 +42,42 @@ class Toolbar: UIView {
         super.init(frame: frame)
 
         addSubview(blurBackgroundView)
-        addSubview(cancelButton)
-        addSubview(resetButton)
-        addSubview(blurButton)
-        addSubview(doneButton)
+        addSubview(flipButton)
+        addSubview(rotateButton)
+        addSubview(aspectRationButton)
     }
 
     required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func titleButton(_ title: String, highlight: Bool = false) -> UIButton {
-        let font = UIFont.systemFont(ofSize: 17)
-        let button = UIButton(frame: CGRect(center: .zero,
-                                            size: CGSize(width: title.width(withFont: font) + 20, height: 44)))
-        if highlight {
-            button.setTitleColor(QCropper.Config.highlightColor, for: .normal)
-            button.setTitleColor(QCropper.Config.highlightColor.withAlphaComponent(0.7), for: .highlighted)
-        } else {
-            button.setTitleColor(UIColor(white: 1, alpha: 1.0), for: .normal)
-            button.setTitleColor(UIColor(white: 1, alpha: 0.7), for: .highlighted)
-        }
-        button.titleLabel?.font = font
-        button.setTitle(title, for: .normal)
-        button.top = 0
-
-        button.autoresizingMask = [.flexibleRightMargin, .flexibleWidth]
+    func iconButton(iconName: String) -> UIButton {
+        let button = IconButton(iconName)
+        button.bottom = height
         return button
+    }
+}
+
+class IconButton: UIButton {
+    init(_ iconName: String) {
+        super.init(frame: CGRect(center: .zero, size: CGSize(width: 44, height: 44)))
+
+        let image = UIImage(named: iconName, in: QCropper.Config.resourceBundle, compatibleWith: nil)?.withRenderingMode(.alwaysTemplate)
+        setImage(image, for: .normal)
+        tintColor = UIColor(white: 0.725, alpha: 1)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var isSelected: Bool {
+        didSet {
+            if isSelected {
+                tintColor = QCropper.Config.highlightColor
+            } else {
+                tintColor = UIColor(white: 0.725, alpha: 1)
+            }
+        }
     }
 }
