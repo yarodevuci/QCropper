@@ -24,10 +24,21 @@ class Toolbar: UIView {
     }()
 
     lazy var doneButton: UIButton = {
-        let button = self.titleButton("Done", highlight: true)
+        let button = self.titleButton("Upload", highlight: true)
         button.right = self.width
         button.setTitleColor(UIColor(white: 0.4, alpha: 1), for: .disabled)
         button.autoresizingMask = [.flexibleBottomMargin, .flexibleLeftMargin]
+        return button
+    }()
+    
+    lazy var blurButton: UIButton = {
+        let button = self.titleButton("Pay to View", highlight: false)
+        button.right = self.width - 70
+        if #available(iOS 13.0, *) {
+            button.setTitleColor(UIColor.link, for: .normal)
+        }
+        button.centerY = self.centerY  // Align vertically
+        button.autoresizingMask = [.flexibleBottomMargin, .flexibleRightMargin]
         return button
     }()
 
@@ -47,6 +58,7 @@ class Toolbar: UIView {
         addSubview(blurBackgroundView)
         addSubview(cancelButton)
         addSubview(resetButton)
+        addSubview(blurButton)
         addSubview(doneButton)
     }
 
