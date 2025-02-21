@@ -363,7 +363,7 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
     @objc
     func blurButtonPressed(_: UIButton) {
         showPayToViewAlert(from: self) { amount in
-            if let amount = amount {
+            if let amount = amount, amount >= 0 {
                 self.starsRequested = amount
                 self.starsAmountLabel.text = amount == 0 ? nil : "Viewing price: ⭐ \(amount)"
 
@@ -421,6 +421,8 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
             textField.text = self.starsRequested == 0 ? nil : "\(self.starsRequested)"
             textField.placeholder = "Set price to view"
             textField.keyboardType = .numberPad
+            textField.delegate = viewController as? UITextFieldDelegate
+            textField.addTarget(self, action: #selector(self.textFieldDidChange(_:)), for: .editingChanged)
         }
         
         let confirmAction = UIAlertAction(title: "Set", style: .default) { _ in
@@ -437,6 +439,12 @@ open class CropperViewController: UIViewController, Rotatable, StateRestorable, 
         alert.addAction(cancelAction)
         
         viewController.present(alert, animated: true, completion: nil)
+    }
+    
+    @objc private func textFieldDidChange(_ textField: UITextField) {
+        if let text = textField.text, text.count > 5 {
+            textField.text = String(text.prefix(5)) // Limit to 5 digits
+        }
     }
 
 // MARK: - Private Methods
